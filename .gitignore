@@ -1,7 +1,7 @@
 # See https://help.github.com/ignore-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 
 # testing
 /coverage
@@ -151,3 +151,6 @@ Temporary Items
 
 ## CUSTOM IGNORES
 /src/gapi-config.js
+/functions/client_secret_792913431736-lojvi0pqgefpgm77sf4e2tjmnu86i9e9.apps.googleusercontent.com.json
+/functions/token.json
+/functions/firebase-debug.log

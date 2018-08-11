@@ -10,7 +10,7 @@ import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
 
 const styles = theme => ({
-   root: {
+  root: {
     display: 'flex',
     flexWrap: 'wrap',
     justifyContent: 'space-around',
@@ -78,11 +78,23 @@ class App extends Component {
   }
 
   componentDidMount() {
-    loadGapi(photos => {
-      this.setState({photos: photos});
-      console.log('got fotos', photos);
-      // fetchFoto(photos[0].id);
-    });
+    fetch('https://us-central1-wedding-1533550385088.cloudfunctions.net/listPhotos', {
+      mode: 'cors'
+    })
+      .then(response => {
+        if (response.status >= 300) {
+          throw response;
+        }
+        return response;
+      })
+      .then(response => response.json())
+      .then(photos => {
+        console.log('got fotos', photos);
+        this.setState({photos: photos});
+      })
+      .catch(r => {
+        console.error('error fetching list of photos', r);
+      });
   }
 
   fileUpload(evt) {
