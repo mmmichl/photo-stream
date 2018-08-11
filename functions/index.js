@@ -3,9 +3,13 @@
 const fs = require('fs');
 const {google} = require('googleapis');
 const functions = require('firebase-functions');
+// https://github.com/expressjs/body-parser#readme
+const bodyParser = require('body-parser');
+// https://github.com/expressjs/cors
 const cors = require('cors')({
-  origin: ['http://localhost:3000/', 'https://mmmichl.github.io/photo-stream/'],
+  origin: ['http://localhost:3000', 'https://mmmichl.github.io/photo-stream/'],
 });
+const streamifier = require('streamifier');
 
 const {CREDENTIAL_PATH, TOKEN_PATH} = require('./config');
 const FOLDER_ID = '1e2YitWc6d0ya17BLo-0p_ZPIAz84DrfJ';
@@ -43,6 +47,7 @@ function queryPhotos(auth, cb) {
   try {
     const drive = google.drive({version: 'v3', auth});
     drive.files.list({
+      // TODO ignore delted
       q: "'" + FOLDER_ID + "' in parents",
       'pageSize': 100,
       'fields': "nextPageToken, files(id, name, thumbnailLink)",
@@ -66,41 +71,57 @@ function queryPhotos(auth, cb) {
  * Lists the names and IDs of up to 10 files.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-exports.listPhotos = functions.https.onRequest((request, response) => {
-  // TODO reject any other method than GET
-  return cors(request, response, () => {
+exports.listPhotos = functions.https.onRequest((req, res) => {
+  return cors(req, res, () => {
+    if (req.method !== 'GET') return res.status(405).send('Method Not Allowed');
+
     authorize((auth, err) => {
-      if (err) return response.status(500).send("error: problem with authentication");
+      if (err) return res.status(500).send("error: problem with authentication");
       queryPhotos(auth, (files, err) => {
-        if (err) return response.status(500).send("error: talking to drive API");
-        response.send(files);
+        if (err) return res.status(500).send("error: talking to drive API");
+        res.send(files);
       });
     });
   })
 });
 
 
-exports.uploadPhoto = functions.https.onRequest((req, res) => cors(req, res, () => {
-  // TODO reject if other method than POST and filesize bigger than 30 MB
-  authorize((auth, err) => {
-    if (err) return response.status(500).send("error: problem with authentication");
+exports.uploadPhoto = functions.https.onRequest((req, res) => {
+  return cors(req, res, () => {
+    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-    const fileName = 'DSC02608.JPG';
-    const fileSize = fs.statSync(fileName).size;
-    const drive = google.drive({version: 'v3', auth});
-    const res = drive.files.create({
-      resource: {
-        name: new Date().toISOString() + '-' + fileName,
-        originalFilename: fileName,
-        parents: [FOLDER_ID]
-      },
-      media: {
-        body: fs.createReadStream(fileName)
-      }
-    }, (err, fileInfoResp) => {
-      console.log(fileInfoResp.data);
-      res.send('upload success');
-      return fileInfoResp.data;
+    console.log('content-type', req.get('Content-Type'), req.get('Content-Length'), req.get('X-Post-By'));
+    const bodyParserImage = bodyParser.raw({
+      type: 'image/*',
+      limit: '10mb'
     });
-  });
-}));
+
+    return bodyParserImage(req, res, () => {
+        // console.log('body', req.body);
+
+      authorize((auth, err) => {
+        if (err) return response.status(500).send("error: problem with authentication");
+
+        const poster = req.get('X-Post-By') || '???';
+        const drive = google.drive({version: 'v3', auth});
+        drive.files.create({
+          resource: {
+            name: new Date().toISOString() + '-' + poster,
+            // originalFilename: fileName,
+            parents: [FOLDER_ID]
+          },
+          media: {
+            body: streamifier.createReadStream(req.body)
+          }
+        }, (err, fileInfoResp) => {
+          if (err) {
+            console.error('The API returned an error: ', err);
+            return res.status(500).send('error: talking to drive API');
+          }
+          console.log('Upload success:', fileInfoResp.data.name, '- id:', fileInfoResp.data.id);
+          res.status(204).send();
+        });
+      });
+    });
+  })
+});
