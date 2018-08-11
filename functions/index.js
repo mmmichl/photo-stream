@@ -8,6 +8,7 @@ const cors = require('cors')({
 });
 
 const {CREDENTIAL_PATH, TOKEN_PATH} = require('./config');
+const FOLDER_ID = '1e2YitWc6d0ya17BLo-0p_ZPIAz84DrfJ';
 
 
 /**
@@ -42,8 +43,8 @@ function queryPhotos(auth, cb) {
   try {
     const drive = google.drive({version: 'v3', auth});
     drive.files.list({
-      q: "'1e2YitWc6d0ya17BLo-0p_ZPIAz84DrfJ' in parents",
-      'pageSize': 10,
+      q: "'" + FOLDER_ID + "' in parents",
+      'pageSize': 100,
       'fields': "nextPageToken, files(id, name, thumbnailLink)",
     }, (err, res) => {
       if (err) {
@@ -54,7 +55,7 @@ function queryPhotos(auth, cb) {
       console.log('no. of files read:', files.length);
       cb(files);
     });
-  } catch(e) {
+  } catch (e) {
     console.error('queryPhotos - caught', e);
     return cb(null, e);
   }
@@ -66,9 +67,8 @@ function queryPhotos(auth, cb) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 exports.listPhotos = functions.https.onRequest((request, response) => {
+  // TODO reject any other method than GET
   return cors(request, response, () => {
-    // Load client secrets from a local file.
-    console.log('starting it all');
     authorize((auth, err) => {
       if (err) return response.status(500).send("error: problem with authentication");
       queryPhotos(auth, (files, err) => {
@@ -78,3 +78,29 @@ exports.listPhotos = functions.https.onRequest((request, response) => {
     });
   })
 });
+
+
+exports.uploadPhoto = functions.https.onRequest((req, res) => cors(req, res, () => {
+  // TODO reject if other method than POST and filesize bigger than 30 MB
+  authorize((auth, err) => {
+    if (err) return response.status(500).send("error: problem with authentication");
+
+    const fileName = 'DSC02608.JPG';
+    const fileSize = fs.statSync(fileName).size;
+    const drive = google.drive({version: 'v3', auth});
+    const res = drive.files.create({
+      resource: {
+        name: new Date().toISOString() + '-' + fileName,
+        originalFilename: fileName,
+        parents: [FOLDER_ID]
+      },
+      media: {
+        body: fs.createReadStream(fileName)
+      }
+    }, (err, fileInfoResp) => {
+      console.log(fileInfoResp.data);
+      res.send('upload success');
+      return fileInfoResp.data;
+    });
+  });
+}));
