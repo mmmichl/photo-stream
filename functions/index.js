@@ -7,7 +7,7 @@ const functions = require('firebase-functions');
 const bodyParser = require('body-parser');
 // https://github.com/expressjs/cors
 const cors = require('cors')({
-  origin: ['http://localhost:3000', 'https://mmmichl.github.io/photo-stream/'],
+  origin: ['http://localhost:3000', 'https://mmmichl.github.io'],
 });
 const streamifier = require('streamifier');
 

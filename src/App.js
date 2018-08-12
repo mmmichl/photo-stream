@@ -54,7 +54,8 @@ class App extends Component {
         <AppBar position="static" color="default">
           <Toolbar>
             <Typography variant="title" color="inherit" className={this.props.classes.flex}>
-              Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>
+              {/*Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>*/}
+              FCM Trainingslager
             </Typography>
             <input
               accept="image/*"
