@@ -5,17 +5,15 @@ import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import {withStyles} from '@material-ui/core/styles';
-import {fetchFoto, loadGapi} from "./gdrive-service";
+import Gallery from 'react-grid-gallery';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
 
 const styles = theme => ({
   root: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    overflow: 'hidden',
+    // display: 'flex',
     backgroundColor: theme.palette.background.paper,
+    // flexDirection: 'horizontal'
   },
   flex: {
     flexGrow: 1,
@@ -51,7 +49,7 @@ class App extends Component {
   render() {
     return (
       <div className={this.props.classes.root}>
-        <AppBar position="static" color="default">
+        <AppBar position="fixed" color="default">
           <Toolbar>
             <Typography variant="title" color="inherit" className={this.props.classes.flex}>
               {/*Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>*/}
@@ -72,12 +70,15 @@ class App extends Component {
           </Toolbar>
         </AppBar>
 
+        <div className="content">
         {(() => {
           switch (this.state.view) {
             case VIEW.LOAD_PHOTOS:
               return <span>Fotos werden geladen...</span>;
             case VIEW.UPLOAD:
               return <span>Foto wird hochgeladen...</span>;
+            case VIEW.VIEW_PHOTOS:
+              return this.state.photos ? <Gallery images={this.state.photos} enableImageSelection={false}/> : null;
             case VIEW.VIEW_PHOTOS:
               return this.state.photos ? <GridList cellHeight={160} className={this.props.classes.gridList} cols={3}>
                 {this.state.photos.map(photo => (
@@ -90,6 +91,7 @@ class App extends Component {
               return <span>Es ist ein Fehler aufgetreten, bitte die Seite neu laden!</span>;
           }
         })()}
+        </div>
       </div>
     );
   }
@@ -112,6 +114,13 @@ class App extends Component {
         return response;
       })
       .then(response => response.json())
+      .then(photos => photos.map(p => ({
+        src: p.thumbnailLink.replace('s220', 's640'),
+        thumbnail: p.thumbnailLink.replace('s220', 's640'),
+        thumbnailWidth: p.imageMediaMetadata.width,
+        thumbnailHeight: p.imageMediaMetadata.height,
+        tags: p.description && [{value: p.description, title: p.description}],
+      })))
       .then(photos => {
         console.log('got fotos', photos);
         this.setState({view: VIEW.VIEW_PHOTOS, photos});
@@ -137,7 +146,6 @@ class App extends Component {
     reader.onload = function (onLoadEvent) {
       var buffer = onLoadEvent.target.result;
       var uint8 = new Uint8Array(buffer); // Assuming the binary format should be read in unsigned 8-byte chunks
-      var result = Array.from(uint8);
 
       return fetch('https://us-central1-wedding-1533550385088.cloudfunctions.net/uploadPhoto', {
         mode: 'cors',

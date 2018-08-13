@@ -7,7 +7,7 @@ const functions = require('firebase-functions');
 const bodyParser = require('body-parser');
 // https://github.com/expressjs/cors
 const cors = require('cors')({
-  origin: ['http://localhost:3000', 'https://mmmichl.github.io'],
+  origin: ['http://localhost:3000', 'http://10.0.0.12:3000', 'https://mmmichl.github.io'],
 });
 const streamifier = require('streamifier');
 
@@ -50,7 +50,7 @@ function queryPhotos(auth, cb) {
       // TODO ignore delted
       q: "'" + FOLDER_ID + "' in parents",
       'pageSize': 100,
-      'fields': "nextPageToken, files(id, name, thumbnailLink)",
+      'fields': "nextPageToken, files(id, name, thumbnailLink, description, imageMediaMetadata(width, height))",
     }, (err, res) => {
       if (err) {
         console.log('The API returned an error: ' + err);
