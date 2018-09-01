@@ -4,11 +4,26 @@ import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
-import {withStyles} from '@material-ui/core/styles';
+import {createMuiTheme, MuiThemeProvider, withStyles} from '@material-ui/core/styles';
 import Gallery from 'react-grid-gallery';
-import GridList from '@material-ui/core/GridList';
-import GridListTile from '@material-ui/core/GridListTile';
 import PhotoCameraIcon from '@material-ui/icons/PhotoCamera';
+import ConsentDialog from "./ConsentDialog";
+
+
+const HOST = 'https://us-central1-wedding-1533550385088.cloudfunctions.net';
+// const HOST = 'http://10.0.0.12:5000/wedding-1533550385088/us-central1';
+
+
+const theme = createMuiTheme({
+  palette: {
+    primary: {
+      main: '#086e83',
+    },
+    secondary: {
+      main: '#D09A37',
+    },
+  },
+});
 
 const styles = theme => ({
   root: {
@@ -22,6 +37,11 @@ const styles = theme => ({
   button: {
     margin: theme.spacing.unit,
   },
+  fab: {
+    position: 'fixed',
+    bottom: theme.spacing.unit * 2,
+    right: theme.spacing.unit * 2,
+  },
   hidden: {
     display: 'none',
   },
@@ -30,6 +50,20 @@ const styles = theme => ({
     height: 450,
   },
 });
+
+
+const tagStyle = {
+  color: '#D09A37',
+  padding: '0.2em 0.6em 0.3em',
+  fontSize: '75%',
+  fontWeight: '400',
+  lineHeight: '1',
+  background: 'rgba(0, 0, 0, 0.65)',
+  textAlign: 'center',
+  borderRadius: '0.25em',
+// white-space: nowrap;
+// vertical-align: baseline;
+};
 
 const VIEW = {
   LOAD_PHOTOS: 1,
@@ -42,6 +76,7 @@ class App extends Component {
   constructor() {
     super();
     this.state = {
+      consentDialog: false,
       view: VIEW.LOAD_PHOTOS,
       photos: null
     };
@@ -49,63 +84,60 @@ class App extends Component {
 
   render() {
     return (
-      <div className={this.props.classes.root}>
-        <AppBar position="fixed" color="default">
-          <Toolbar>
-            <Typography variant="title" color="inherit" className={this.props.classes.flex}>
-              Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>
-            </Typography>
+      <MuiThemeProvider theme={theme}>
+        <div className={this.props.classes.root}>
+          <ConsentDialog open={this.state.consentDialog} onClose={() => this.setState({consentDialog: false})}/>
+          <AppBar position="fixed" color="primary">
+            <Toolbar>
+              <Typography variant="title" color="inherit" className={this.props.classes.flex}>
+                Anna <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span> Michl
+              </Typography>
+            </Toolbar>
+          </AppBar>
+
+          <div className="content">
+            {(() => {
+              switch (this.state.view) {
+                case VIEW.LOAD_PHOTOS:
+                  return <span>Fotos werden geladen...</span>;
+                case VIEW.UPLOAD:
+                  return <span>Foto wird hochgeladen...</span>;
+                case VIEW.VIEW_PHOTOS:
+                  return this.state.photos ? <Gallery images={this.state.photos} enableImageSelection={false}
+                                                      tagStyle={tagStyle}/> : null;
+                default:
+                  return <span>Es ist ein Fehler aufgetreten, bitte die Seite neu laden!</span>;
+              }
+            })()}
+
             <input
               accept="image/*"
               className={this.props.classes.hidden}
-              id="pic-upload-input"
+              id="pic-upload-input2"
               type="file"
               onChange={evt => this.fileUpload(evt)}
             />
-            <label htmlFor="pic-upload-input">
-              <Button component="span" variant="outlined" className={this.props.classes.button}>
+            <label htmlFor="pic-upload-input2">
+              <Button component="span" variant="fab" className={this.props.classes.fab} color='secondary'>
                 <PhotoCameraIcon/>
-                Neues Foto
               </Button>
             </label>
-          </Toolbar>
-        </AppBar>
-
-        <div className="content">
-        {(() => {
-          switch (this.state.view) {
-            case VIEW.LOAD_PHOTOS:
-              return <span>Fotos werden geladen...</span>;
-            case VIEW.UPLOAD:
-              return <span>Foto wird hochgeladen...</span>;
-            case VIEW.VIEW_PHOTOS:
-              return this.state.photos ? <Gallery images={this.state.photos} enableImageSelection={false}/> : null;
-            case VIEW.VIEW_PHOTOS:
-              return this.state.photos ? <GridList cellHeight={160} className={this.props.classes.gridList} cols={3}>
-                {this.state.photos.map(photo => (
-                  <GridListTile key={photo.id} cols={1}>
-                    <img src={photo.thumbnailLink}/>
-                  </GridListTile>
-                ))}
-              </GridList> : null;
-            default:
-              return <span>Es ist ein Fehler aufgetreten, bitte die Seite neu laden!</span>;
-          }
-        })()}
+          </div>
         </div>
-      </div>
+      </MuiThemeProvider>
     );
   }
 
   componentDidMount() {
     this.fetchPhotos();
+    this.checkForFirstVisit()
   }
 
   fetchPhotos() {
     this.setState({view: VIEW.LOAD_PHOTOS});
 
     // fetch('http://localhost:5000/wedding-1533550385088/us-central1/listPhotos', {
-    fetch('https://us-central1-wedding-1533550385088.cloudfunctions.net/listPhotos', {
+    fetch(HOST + '/listPhotos', {
       mode: 'cors'
     })
       .then(response => {
@@ -118,8 +150,8 @@ class App extends Component {
       .then(photos => photos.map(p => ({
         src: p.thumbnailLink.replace('s220', 's640'),
         thumbnail: p.thumbnailLink.replace('s220', 's640'),
-        thumbnailWidth: p.imageMediaMetadata.width,
-        thumbnailHeight: p.imageMediaMetadata.height,
+        thumbnailWidth: p.imageMediaMetadata.rotation ? p.imageMediaMetadata.height : p.imageMediaMetadata.width,
+        thumbnailHeight: p.imageMediaMetadata.rotation ? p.imageMediaMetadata.width : p.imageMediaMetadata.height,
         tags: p.description && [{value: p.description, title: p.description}],
       })))
       .then(photos => {
@@ -133,37 +165,49 @@ class App extends Component {
 
   fileUpload(evt) {
     const self = this;
-    let file = evt.currentTarget.files[0];
-    if (!file) {
-      alert('Kein Bild ausgewählt!');
+    let files = evt.currentTarget.files;
+
+    if (!files || files.length === 0) {
+      // not picture selected or hit cancel
       return;
     }
 
-    this.setState({view: VIEW.UPLOAD});
-    console.log('got file to upload', file);
+    for (let file of files) {
+      this.setState({view: VIEW.UPLOAD});
+      console.log('got file to upload', file);
 
-    var reader = new FileReader();
+      var reader = new FileReader();
 
-    reader.onload = function (onLoadEvent) {
-      var buffer = onLoadEvent.target.result;
-      var uint8 = new Uint8Array(buffer); // Assuming the binary format should be read in unsigned 8-byte chunks
+      reader.onload = function (onLoadEvent) {
+        var buffer = onLoadEvent.target.result;
+        var uint8 = new Uint8Array(buffer); // Assuming the binary format should be read in unsigned 8-byte chunks
 
-      return fetch('https://us-central1-wedding-1533550385088.cloudfunctions.net/uploadPhoto', {
-        mode: 'cors',
-        headers: {
-          'Content-Type': file.type,
-          'X-Post-by': file.name
-        },
-        method: 'POST',
-        body: uint8
-      }).then(resp => resp.text())
-        .then(txt => {
-          console.log('file upload success', txt);
-          self.fetchPhotos();
-        });
-    };
+        return fetch(HOST + '/uploadPhoto', {
+          mode: 'cors',
+          headers: {
+            'Content-Type': file.type,
+            'X-Post-by': localStorage.getItem('name') || 'unknown'
+          },
+          method: 'POST',
+          body: uint8
+        }).then(resp => resp.text())
+          .then(txt => {
+            console.log('file upload success', txt);
+            self.fetchPhotos();
+          });
+      };
 
-    reader.readAsArrayBuffer(file);
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  /**
+   * check if this is the first visit. Then show the consent dialog
+   */
+  checkForFirstVisit() {
+    if (!localStorage.getItem('name')) {
+      this.setState({consentDialog: true})
+    }
   }
 }
 

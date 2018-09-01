@@ -49,7 +49,7 @@ function queryPhotos(auth, cb) {
     drive.files.list({
       q: "'" + FOLDER_ID + "' in parents and trashed = false",
       'pageSize': 100,
-      'fields': "nextPageToken, files(id, name, thumbnailLink, description, imageMediaMetadata(width, height))",
+      'fields': "nextPageToken, files(id, name, thumbnailLink, description, imageMediaMetadata(width, height, rotation))",
     }, (err, res) => {
       if (err) {
         console.error('The API returned an error: ' + err);
@@ -106,6 +106,7 @@ exports.uploadPhoto = functions.https.onRequest((req, res) => {
         drive.files.create({
           resource: {
             name: new Date().toISOString() + '-' + poster,
+            description: poster,
             // originalFilename: fileName,
             parents: [FOLDER_ID]
           },
