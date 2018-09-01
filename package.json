@@ -18,7 +18,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
-  "homepage": "https://wedding-1533550385088.firebaseapp.com/",
+  "homepage": "https://wedding.ressmann.io/",
   "devDependencies": {
     "gh-pages": "^1.2.0"
   }
