@@ -165,40 +165,38 @@ class App extends Component {
 
   fileUpload(evt) {
     const self = this;
-    let files = evt.currentTarget.files;
+    let file = evt.currentTarget.files[0];
 
-    if (!files || files.length === 0) {
+    if (!file) {
       // not picture selected or hit cancel
       return;
     }
 
-    for (let file of files) {
-      this.setState({view: VIEW.UPLOAD});
-      console.log('got file to upload', file);
+    this.setState({view: VIEW.UPLOAD});
+    console.log('got file to upload', file);
 
-      var reader = new FileReader();
+    var reader = new FileReader();
 
-      reader.onload = function (onLoadEvent) {
-        var buffer = onLoadEvent.target.result;
-        var uint8 = new Uint8Array(buffer); // Assuming the binary format should be read in unsigned 8-byte chunks
+    reader.onload = function (onLoadEvent) {
+      var buffer = onLoadEvent.target.result;
+      var uint8 = new Uint8Array(buffer); // Assuming the binary format should be read in unsigned 8-byte chunks
 
-        return fetch(HOST + '/uploadPhoto', {
-          mode: 'cors',
-          headers: {
-            'Content-Type': file.type,
-            'X-Post-by': localStorage.getItem('name') || 'unknown'
-          },
-          method: 'POST',
-          body: uint8
-        }).then(resp => resp.text())
-          .then(txt => {
-            console.log('file upload success', txt);
-            self.fetchPhotos();
-          });
-      };
+      return fetch(HOST + '/uploadPhoto', {
+        mode: 'cors',
+        headers: {
+          'Content-Type': file.type,
+          'X-Post-by': localStorage.getItem('name') || 'unknown'
+        },
+        method: 'POST',
+        body: uint8
+      }).then(resp => resp.text())
+        .then(txt => {
+          console.log('file upload success', txt);
+          self.fetchPhotos();
+        });
+    };
 
-      reader.readAsArrayBuffer(file);
-    }
+    reader.readAsArrayBuffer(file);
   }
 
   /**
