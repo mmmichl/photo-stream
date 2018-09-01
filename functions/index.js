@@ -33,7 +33,7 @@ function authorize(callback) {
     // Check if we have previously stored a token.
     fs.readFile(TOKEN_PATH, (err, token) => {
       if (err) {
-        console.log('Error loading token file:', err);
+        console.error('Error loading token file:', err);
         return cb(null, err);
       }
       oAuth2Client.setCredentials(JSON.parse(token));
@@ -47,13 +47,12 @@ function queryPhotos(auth, cb) {
   try {
     const drive = google.drive({version: 'v3', auth});
     drive.files.list({
-      // TODO ignore delted
-      q: "'" + FOLDER_ID + "' in parents",
+      q: "'" + FOLDER_ID + "' in parents and trashed = false",
       'pageSize': 100,
       'fields': "nextPageToken, files(id, name, thumbnailLink, description, imageMediaMetadata(width, height))",
     }, (err, res) => {
       if (err) {
-        console.log('The API returned an error: ' + err);
+        console.error('The API returned an error: ' + err);
         return cb(null, err);
       }
       const files = res.data.files;

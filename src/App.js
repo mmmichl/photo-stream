@@ -8,6 +8,7 @@ import {withStyles} from '@material-ui/core/styles';
 import Gallery from 'react-grid-gallery';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
+import PhotoCameraIcon from '@material-ui/icons/PhotoCamera';
 
 const styles = theme => ({
   root: {
@@ -52,8 +53,7 @@ class App extends Component {
         <AppBar position="fixed" color="default">
           <Toolbar>
             <Typography variant="title" color="inherit" className={this.props.classes.flex}>
-              {/*Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>*/}
-              FCM Trainingslager
+              Annas <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span>
             </Typography>
             <input
               accept="image/*"
@@ -64,6 +64,7 @@ class App extends Component {
             />
             <label htmlFor="pic-upload-input">
               <Button component="span" variant="outlined" className={this.props.classes.button}>
+                <PhotoCameraIcon/>
                 Neues Foto
               </Button>
             </label>
