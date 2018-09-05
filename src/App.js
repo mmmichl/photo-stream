@@ -106,7 +106,7 @@ class App extends Component {
           <AppBar position="fixed" color="primary">
             <Toolbar>
               <Typography variant="title" color="inherit" className={this.props.classes.flex}>
-                Anna <span role="img" aria-label="Brautpaar">👰 ⚭ 🤵</span> Michl
+                Anna <span role="img" aria-label="Brautpaar" onDoubleClick={() => this.setState({consentDialog: true})}>👰 ⚭ 🤵</span> Michl
               </Typography>
             </Toolbar>
           </AppBar>
