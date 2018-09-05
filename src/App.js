@@ -8,11 +8,17 @@ import {createMuiTheme, MuiThemeProvider, withStyles} from '@material-ui/core/st
 import Gallery from 'react-grid-gallery';
 import PhotoCameraIcon from '@material-ui/icons/PhotoCamera';
 import ConsentDialog from "./ConsentDialog";
+import CircularProgress from '@material-ui/core/CircularProgress';
+import DialogContent from "@material-ui/core/DialogContent/DialogContent";
+import Dialog from "@material-ui/core/Dialog/Dialog";
+import Snackbar from '@material-ui/core/Snackbar';
+import Slide from '@material-ui/core/Slide';
 
 
 const HOST = 'https://us-central1-wedding-1533550385088.cloudfunctions.net';
 // const HOST = 'http://10.0.0.12:5000/wedding-1533550385088/us-central1';
 
+const DEBUG_PIC_COUNT = 100;
 
 const theme = createMuiTheme({
   palette: {
@@ -42,6 +48,20 @@ const styles = theme => ({
     bottom: theme.spacing.unit * 2,
     right: theme.spacing.unit * 2,
   },
+  fabMoveUp: {
+    transform: 'translate3d(0, -46px, 0)',
+    transition: theme.transitions.create('transform', {
+      duration: theme.transitions.duration.enteringScreen,
+      easing: theme.transitions.easing.easeOut,
+    }),
+  },
+  fabMoveDown: {
+    transform: 'translate3d(0, 0, 0)',
+    transition: theme.transitions.create('transform', {
+      duration: theme.transitions.duration.leavingScreen,
+      easing: theme.transitions.easing.sharp,
+    }),
+  },
   hidden: {
     display: 'none',
   },
@@ -65,24 +85,20 @@ const tagStyle = {
 // vertical-align: baseline;
 };
 
-const VIEW = {
-  LOAD_PHOTOS: 1,
-  VIEW_PHOTOS: 2,
-  UPLOAD: 3,
-  ERROR: 4
-};
-
 class App extends Component {
   constructor() {
     super();
     this.state = {
       consentDialog: false,
-      view: VIEW.LOAD_PHOTOS,
-      photos: null
+      fileUpload: false,
+      loadingPhotos: false,
+      photos: []
     };
   }
 
   render() {
+    const fabClassName = this.props.classes.fab + ' ' + (this.state.fileUpload ? this.props.classes.fabMoveUp : this.props.classes.fabMoveDown);
+
     return (
       <MuiThemeProvider theme={theme}>
         <div className={this.props.classes.root}>
@@ -96,19 +112,14 @@ class App extends Component {
           </AppBar>
 
           <div className="content">
-            {(() => {
-              switch (this.state.view) {
-                case VIEW.LOAD_PHOTOS:
-                  return <span>Fotos werden geladen...</span>;
-                case VIEW.UPLOAD:
-                  return <span>Foto wird hochgeladen...</span>;
-                case VIEW.VIEW_PHOTOS:
-                  return this.state.photos ? <Gallery images={this.state.photos} enableImageSelection={false}
-                                                      tagStyle={tagStyle}/> : null;
-                default:
-                  return <span>Es ist ein Fehler aufgetreten, bitte die Seite neu laden!</span>;
-              }
-            })()}
+            {this.state.photos ?
+              <Gallery images={this.state.photos} enableImageSelection={false} tagStyle={tagStyle}/> : null}
+            {this.state.loadingPhotos ?
+              <Dialog open={true}>
+                <DialogContent>
+                  <CircularProgress size={20}/> Lade Bilder
+                </DialogContent>
+              </Dialog> : null}
 
             <input
               accept="image/*"
@@ -118,14 +129,23 @@ class App extends Component {
               onChange={evt => this.fileUpload(evt)}
             />
             <label htmlFor="pic-upload-input2">
-              <Button component="span" variant="fab" className={this.props.classes.fab} color='secondary'>
+              <Button component="span" variant="fab" className={fabClassName} color='secondary'>
                 <PhotoCameraIcon/>
               </Button>
             </label>
+            <Snackbar
+              open={this.state.fileUpload}
+              TransitionComponent={this.transitionUp}
+              message={<span>Foto wird hochgeladen <CircularProgress size={20} color="secondary"/></span>}
+            />
           </div>
         </div>
       </MuiThemeProvider>
     );
+  }
+
+  transitionUp(props) {
+    return <Slide {...props} direction="up"/>;
   }
 
   componentDidMount() {
@@ -134,9 +154,8 @@ class App extends Component {
   }
 
   fetchPhotos() {
-    this.setState({view: VIEW.LOAD_PHOTOS});
+    this.setState({loadingPhotos: true});
 
-    // fetch('http://localhost:5000/wedding-1533550385088/us-central1/listPhotos', {
     fetch(HOST + '/listPhotos', {
       mode: 'cors'
     })
@@ -147,16 +166,21 @@ class App extends Component {
         return response;
       })
       .then(response => response.json())
+      // .then(photos => photos.reduce((acc, cur) =>
+      //   acc.concat(new Array(Math.round(DEBUG_PIC_COUNT / photos.length)).fill().map((_, i) => ({
+      //     ...cur,
+      //     thumbnailLink: cur.thumbnailLink + "?" + i
+      //   }))), []))
       .then(photos => photos.map(p => ({
         src: p.thumbnailLink.replace('s220', 's640'),
-        thumbnail: p.thumbnailLink.replace('s220', 's640'),
+        thumbnail: p.thumbnailLink,
         thumbnailWidth: p.imageMediaMetadata.rotation ? p.imageMediaMetadata.height : p.imageMediaMetadata.width,
         thumbnailHeight: p.imageMediaMetadata.rotation ? p.imageMediaMetadata.width : p.imageMediaMetadata.height,
         tags: p.description && [{value: p.description, title: p.description}],
       })))
       .then(photos => {
         console.log('got fotos', photos);
-        this.setState({view: VIEW.VIEW_PHOTOS, photos});
+        this.setState({loadingPhotos: false, photos});
       })
       .catch(r => {
         console.error('error fetching list of photos', r);
@@ -172,7 +196,7 @@ class App extends Component {
       return;
     }
 
-    this.setState({view: VIEW.UPLOAD});
+    this.setState({fileUpload: true});
     console.log('got file to upload', file);
 
     var reader = new FileReader();
@@ -192,6 +216,7 @@ class App extends Component {
       }).then(resp => resp.text())
         .then(txt => {
           console.log('file upload success', txt);
+          self.setState({fileUpload: false});
           self.fetchPhotos();
         });
     };

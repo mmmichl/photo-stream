@@ -37,7 +37,7 @@ export default class ConsentDialog extends React.Component {
         onClose={this.handleClose}
         aria-labelledby="form-dialog-title"
       >
-        <DialogTitle id="form-dialog-title">Wie willst du erinnert werden?</DialogTitle>
+        <DialogTitle id="form-dialog-title">Dein Name</DialogTitle>
         <DialogContent>
           <FormControl {...(this.state.error && {error: true})}>
             <InputLabel htmlFor="name">Name <span style={{color: 'red'}}>*</span></InputLabel>
@@ -51,7 +51,7 @@ export default class ConsentDialog extends React.Component {
             />
             {!this.state.error ?
               <FormHelperText>
-                Dieser Name wird bei deinem Fotos angezeigt. Wähle weiße, du kannst es später nicht mehr ändern.
+                Dieser Name wird bei deinem Fotos angezeigt. Wähle weise, du kannst es später nicht mehr ändern.
               </FormHelperText> :
               <FormHelperText>
                 Der Name muss zwischen 3 und 15 Zeichen lang sein!
