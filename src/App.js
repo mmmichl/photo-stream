@@ -13,10 +13,15 @@ import DialogContent from "@material-ui/core/DialogContent/DialogContent";
 import Dialog from "@material-ui/core/Dialog/Dialog";
 import Snackbar from '@material-ui/core/Snackbar';
 import Slide from '@material-ui/core/Slide';
+import debounce from 'debounce';
 
+// If the scrolbar is this distance away from the bottom, increase the displayed picture range
+const SCROLL_TRIGGER_DISTANCE = 400;
+
+const VIEW_BLOCK_SIZE = 50;
 
 const HOST = 'https://us-central1-wedding-1533550385088.cloudfunctions.net';
-// const HOST = 'http://10.0.0.12:5000/wedding-1533550385088/us-central1';
+// const HOST = 'http://localhost:5000/wedding-1533550385088/us-central1';
 
 const DEBUG_PIC_COUNT = 100;
 
@@ -92,12 +97,14 @@ class App extends Component {
       consentDialog: false,
       fileUpload: false,
       loadingPhotos: false,
-      photos: []
+      photos: [],
+      page: 0,
     };
   }
 
   render() {
     const fabClassName = this.props.classes.fab + ' ' + (this.state.fileUpload ? this.props.classes.fabMoveUp : this.props.classes.fabMoveDown);
+    const pagedPhotoList = this.state.photos.slice(0, this.state.page * VIEW_BLOCK_SIZE);
 
     return (
       <MuiThemeProvider theme={theme}>
@@ -113,7 +120,7 @@ class App extends Component {
 
           <div className="content">
             {this.state.photos ?
-              <Gallery images={this.state.photos} enableImageSelection={false} tagStyle={tagStyle}/> : null}
+              <Gallery images={pagedPhotoList} enableImageSelection={false} tagStyle={tagStyle}/> : null}
             {this.state.loadingPhotos ?
               <Dialog open={true}>
                 <DialogContent>
@@ -148,9 +155,36 @@ class App extends Component {
     return <Slide {...props} direction="up"/>;
   }
 
+  scrollListener = (e) => {
+    const html = e.target.documentElement;
+    if (!html) {
+      return;
+    }
+
+    // console.log('scrolled!', html.scrollHeight - html.scrollTop - html.clientHeight, SCROLL_TRIGGER_DISTANCE)
+    if (html.scrollHeight - html.scrollTop - html.clientHeight < SCROLL_TRIGGER_DISTANCE) {
+      console.log("trigger expand")
+      this.debouncedExpandList();
+    }
+  };
+
+  debouncedExpandList = debounce(this.expandList, 200, true);
+
+  expandList() {
+    if (this.state.page * VIEW_BLOCK_SIZE < this.state.photos.length) {
+      this.setState(s => ({page: s.page + 1}));
+    }
+  }
+
   componentDidMount() {
     this.fetchPhotos();
-    this.checkForFirstVisit()
+    this.checkForFirstVisit();
+
+    window.addEventListener('scroll', this.scrollListener);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.scrollListener);
   }
 
   fetchPhotos() {
@@ -179,8 +213,8 @@ class App extends Component {
         tags: p.description && [{value: p.description, title: p.description}],
       })))
       .then(photos => {
-        console.log('got fotos', photos);
-        this.setState({loadingPhotos: false, photos});
+        console.log('got photos', photos);
+        this.setState({loadingPhotos: false, page: 1, photos});
       })
       .catch(r => {
         console.error('error fetching list of photos', r);

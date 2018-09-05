@@ -48,7 +48,7 @@ function queryPhotos(auth, cb) {
     const drive = google.drive({version: 'v3', auth});
     drive.files.list({
       q: "'" + FOLDER_ID + "' in parents and trashed = false",
-      // 'pageSize': 100,
+      'pageSize': 1000,
       'fields': "nextPageToken, files(id, name, thumbnailLink, description, imageMediaMetadata(width, height, rotation))",
     }, (err, res) => {
       if (err) {
